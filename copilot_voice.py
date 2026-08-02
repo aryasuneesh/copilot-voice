@@ -35,7 +35,7 @@ for _name in ("stdout", "stderr"):
     if getattr(sys, _name) is None:
         setattr(sys, _name, open(os.devnull, "w"))
 
-__version__ = "0.6.1"
+__version__ = "0.6.2"
 
 APP_NAME = "CopilotVoice"
 if IS_WINDOWS:
@@ -65,6 +65,7 @@ DEFAULTS = {
     "restore_clipboard": True,
     "min_seconds": 0.3,
     "tail_seconds": 0.4,       # keep recording this long after the key is let go
+    "intercept_chord": True,   # withhold LWin to stop Search opening (Windows only)
     "sample_rate": 16000,
     "beep": True,
 }
@@ -377,6 +378,17 @@ class ChordFilter:
             return True, ()
 
 
+def use_chord_filter(cfg):
+    """Whether to withhold LWin as well as the trigger key.
+
+    This is the most invasive thing the app does -- it routes every keystroke
+    through a Python callback and briefly holds back a modifier the whole OS
+    depends on. Turning it off binds the trigger key plainly: Windows may also
+    open Search, but the Win key is never touched.
+    """
+    return IS_WINDOWS and cfg.get("intercept_chord", True)
+
+
 def beep(cfg, high):
     if not cfg["beep"]:
         return
@@ -484,20 +496,27 @@ class Dictation:
             self.finish()
 
     def bind(self):
+        # fresh queue: unbind() leaves a stop sentinel behind, which would
+        # otherwise be the first thing a rebound worker reads
+        self.queue = queue.Queue()
         threading.Thread(target=self._worker, daemon=True).start()
         scans = trigger_scan_codes(self.cfg)
-        if IS_WINDOWS:
+        if use_chord_filter(self.cfg):
             self.filter = ChordFilter(scans, self.on_press, self.on_release)
             self.hooks.append(keyboard.hook(self.filter.handle, suppress=True))
             log(f"bound scan codes {sorted(scans)} via chord filter")
         else:
-            # keyboard's Linux backend ignores suppress entirely -- it never
-            # grabs the device -- so the chord filter would withhold nothing and
-            # replay LWin on top of the press the desktop had already seen.
+            # Plain binding: only the trigger key is touched, never a modifier.
+            # On Linux suppress is ignored anyway -- keyboard's backend there
+            # never grabs the device -- so the chord filter would withhold
+            # nothing and replay LWin on top of the press the desktop already saw.
+            self.filter = None
             for scan in scans:
-                self.hooks.append(keyboard.on_press_key(scan, lambda e: self.on_press()))
-                self.hooks.append(keyboard.on_release_key(scan, lambda e: self.on_release()))
-            log(f"bound scan codes {sorted(scans)} without suppression (linux)")
+                self.hooks.append(keyboard.on_press_key(
+                    scan, lambda e: self.on_press(), suppress=IS_WINDOWS))
+                self.hooks.append(keyboard.on_release_key(
+                    scan, lambda e: self.on_release(), suppress=IS_WINDOWS))
+            log(f"bound scan codes {sorted(scans)} plainly (chord filter off)")
 
     def unbind(self):
         for h in self.hooks:
@@ -830,6 +849,9 @@ class Tray:
             mode_item("hold"),
             mode_item("toggle"),
             pystray.Menu.SEPARATOR,
+            pystray.MenuItem("Stop Windows opening Search", self.toggle_chord,
+                             checked=lambda _: use_chord_filter(self.cfg),
+                             enabled=IS_WINDOWS),
             pystray.MenuItem("Run setup again...", self.setup_again),
             pystray.MenuItem("Start with Windows", self.toggle_autostart,
                              checked=lambda _: autostart_enabled()),
@@ -847,6 +869,13 @@ class Tray:
         So hand the reason back to main() and let it run the window."""
         self.next_action = action
         self.icon.stop()
+
+    def toggle_chord(self, *_):
+        self.cfg["intercept_chord"] = not self.cfg.get("intercept_chord", True)
+        save_config(self.cfg)
+        self.dictation.unbind()   # rebind live, no restart needed
+        self.dictation.bind()
+        self.icon.update_menu()
 
     def setup_again(self, *_):
         self.leave("setup")
@@ -1129,6 +1158,17 @@ def selftest():
     filt2.handle(Event(91, "down"))
     time.sleep(0.15)
     assert filt2.state != "waiting", "replay timer never completed"
+
+    # the chord filter is opt-out, and never runs off Windows
+    assert use_chord_filter(DEFAULTS) is IS_WINDOWS
+    assert use_chord_filter({**DEFAULTS, "intercept_chord": False}) is False
+    assert use_chord_filter({}) is IS_WINDOWS   # missing key = on by default
+
+    # rebinding must not leave the stop sentinel that kills the new worker
+    d = Dictation({**DEFAULTS, "beep": False}, lambda text: None)
+    d.queue.put(None)
+    d.queue = queue.Queue()          # what bind() does
+    assert d.queue.empty()
 
     # the tail buffer keeps the mic open past the release, in both modes
     for mode in ("hold", "toggle"):

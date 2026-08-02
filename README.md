@@ -115,6 +115,7 @@ folder** in the tray menu takes you there.
 | `restore_clipboard` | `true` | Puts your previous clipboard back afterwards |
 | `language` | `"en"` | Set `""` to auto-detect (multilingual models only) |
 | `beep` | `true` | The start and stop tones |
+| `intercept_chord` | `true` | Stops Windows opening Search when you press the Copilot key. Turn off if the Windows key misbehaves |
 
 ## Privacy
 
@@ -138,6 +139,18 @@ with what it prints:
 
 In the meantime, run setup again from the tray and bind a spare key instead —
 F13, Right Ctrl, or a macro key all work well.
+</details>
+
+<details>
+<summary><b>My Windows key is behaving strangely</b></summary>
+
+To stop Windows opening Search, the app briefly holds back the Windows key
+while it checks whether the Copilot key is being pressed. If that interferes
+with anything, turn it off from the tray: untick **Stop Windows opening
+Search**. The change takes effect immediately.
+
+Your key still triggers dictation afterwards — Windows may just open Search as
+well. Binding a spare key instead avoids both problems.
 </details>
 
 <details>

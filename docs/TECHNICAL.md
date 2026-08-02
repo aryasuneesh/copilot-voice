@@ -36,6 +36,20 @@ enqueues; a worker thread records and transcribes.
 so it must stay allocation-free and do no I/O. It is the first thing to suspect
 if input misbehaves.
 
+**Never inject a key while holding the filter's lock.** `SendInput` re-enters
+the hook callback synchronously on the same thread. With a non-reentrant lock
+that deadlocks the listener thread while it is still holding back a withheld
+LWin — the Windows key then stops working for the life of the process.
+`handle()` decides under the lock, returns the keys to inject, and sends them
+after releasing it. `handle()` also fails open: an exception passes the event
+through rather than swallowing it.
+
+Because this is the most invasive part of the app, it is opt-out.
+`intercept_chord: false` (or unticking **Stop Windows opening Search** in the
+tray) binds the trigger key plainly and never touches a modifier. Windows may
+then open Search alongside dictation, which is a far smaller problem than a
+broken Win key. `use_chord_filter()` is the single place that decides.
+
 ### The Windows-level alternative
 
 `HKCU\Software\Microsoft\Windows\Shell\BrandedKey\BrandedKeyChoiceType` backs

@@ -5,7 +5,7 @@
 
 [Setup]
 AppName={#AppName}
-AppVersion=0.6.1
+AppVersion=0.6.2
 AppPublisher=aryasuneesh
 DefaultDirName={autopf}\CopilotVoice
 DefaultGroupName={#AppName}
