@@ -158,16 +158,20 @@ Cut the GitHub release first: winget and Chocolatey both verify the installer's
 SHA256 against the published asset.
 
 ```powershell
-gh release download v0.6.0 -p CopilotVoiceSetup.exe -D dist
-powershell -File packaging\update-manifests.ps1 -Version 0.6.0
+gh release download v0.6.2 -p CopilotVoiceSetup.exe -D dist --clobber
+powershell -ExecutionPolicy Bypass -File packaging\update-manifests.ps1 -Version 0.6.2
 ```
+
+`-ExecutionPolicy Bypass` is per-process and required on a default Windows
+install, where unsigned scripts are blocked.
 
 That stamps the released installer's hash into both manifests. Then:
 
 ```powershell
 choco pack packaging\chocolatey\copilot-voice.nuspec
-choco push copilot-voice.0.6.0.nupkg --source https://push.chocolatey.org/
+choco push copilot-voice.0.6.2.nupkg --source https://push.chocolatey.org/ --api-key YOUR_KEY
 winget validate packaging\winget
 wingetcreate submit packaging\winget
-python -m build && twine upload dist/*.whl dist/*.tar.gz
+python -m build
+twine upload dist\copilot_voice-0.6.2-py3-none-any.whl dist\copilot_voice-0.6.2.tar.gz
 ```
