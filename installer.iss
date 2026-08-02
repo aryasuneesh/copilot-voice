@@ -1,4 +1,4 @@
-﻿; Inno Setup script -> dist\CopilotVoiceSetup.exe
+; Inno Setup script -> dist\CopilotVoiceSetup.exe
 #define AppName "Copilot Voice"
 #define AppExe "CopilotVoice.exe"
 #define TaskName "CopilotVoiceAutostart"

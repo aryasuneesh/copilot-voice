@@ -1,4 +1,4 @@
-﻿"""Copilot key -> local Whisper dictation.
+"""Copilot key -> local Whisper dictation.
 
 First run opens a setup wizard: pick the key, pick the mode, download the model
 with a real progress bar, and try it out. After that it lives in the tray.
