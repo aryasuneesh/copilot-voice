@@ -14,6 +14,6 @@ ReleaseDate: 2026-08-02
 Installers:
   - Architecture: x64
     InstallerUrl: https://github.com/aryasuneesh/copilot-voice/releases/download/v0.6.0/CopilotVoiceSetup.exe
-    InstallerSha256: 2D3E7A9B525B94A2AA4101673E5BB0FC7CA6A91E5BD87E02F197131E5ED8541A
+    InstallerSha256: 278EE872D9121FE3FB4EE36798C00930F46B403FDDF4372F6858F7F2E673DE94
 ManifestType: installer
 ManifestVersion: 1.6.0

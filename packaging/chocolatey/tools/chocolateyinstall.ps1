@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $version  = '0.6.0'
 $packageName = 'copilot-voice'
 $url      = "https://github.com/aryasuneesh/copilot-voice/releases/download/v$version/CopilotVoiceSetup.exe"
-$checksum = '2D3E7A9B525B94A2AA4101673E5BB0FC7CA6A91E5BD87E02F197131E5ED8541A'
+$checksum = '278EE872D9121FE3FB4EE36798C00930F46B403FDDF4372F6858F7F2E673DE94'
 
 $packageArgs = @{
   packageName    = $packageName
