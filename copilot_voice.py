@@ -35,7 +35,7 @@ for _name in ("stdout", "stderr"):
     if getattr(sys, _name) is None:
         setattr(sys, _name, open(os.devnull, "w"))
 
-__version__ = "0.6.2"
+__version__ = "0.6.3"
 
 APP_NAME = "CopilotVoice"
 if IS_WINDOWS:
@@ -282,12 +282,18 @@ class ChordFilter:
 
     WIN, SHIFT = 91, 42
 
+    # A hook reports LWin as 0x5B, but the real key is the *extended* 0xE05B.
+    # Replaying the plain code injects something Windows does not accept as the
+    # Windows key, so shell shortcuts (Win+V, Win+E) stay dead until auto-repeat
+    # delivers a genuine press.
+    REPLAY_AS = {WIN: 57435, 92: 57436}
+
     def __init__(self, trigger_scans, on_down, on_up, window=0.03, sender=None):
         self.trigger_scans = set(trigger_scans)
         self.on_down = on_down
         self.on_up = on_up
         self.window = window
-        self.send = sender or (lambda scan: keyboard.press(scan))
+        self.send = sender or (lambda scan: keyboard.press(self.REPLAY_AS.get(scan, scan)))
         self.state = "idle"      # idle | waiting | chord | passthrough
         self.held = []
         self.timer = None
@@ -1158,6 +1164,22 @@ def selftest():
     filt2.handle(Event(91, "down"))
     time.sleep(0.15)
     assert filt2.state != "waiting", "replay timer never completed"
+
+    # A withheld LWin must be replayed as the EXTENDED scan code, or Windows
+    # does not accept it as the Windows key and Win+V, Win+E stay dead.
+    if IS_WINDOWS:
+        extended = keyboard.key_to_scan_codes("left windows")[0]
+        assert extended != ChordFilter.WIN, "extended and plain codes must differ"
+        assert ChordFilter.REPLAY_AS[ChordFilter.WIN] == extended, (
+            f"replays {ChordFilter.REPLAY_AS[ChordFilter.WIN]}, needs {extended}")
+
+        # the default sender must apply that mapping (checked without pressing)
+        sent = []
+        filt = ChordFilter({110}, lambda: None, lambda: None,
+                           sender=lambda scan: sent.append(
+                               ChordFilter.REPLAY_AS.get(scan, scan)))
+        filt.send(ChordFilter.WIN)
+        assert sent == [extended], sent
 
     # the chord filter is opt-out, and never runs off Windows
     assert use_chord_filter(DEFAULTS) is IS_WINDOWS
