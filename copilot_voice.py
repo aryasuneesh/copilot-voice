@@ -1,4 +1,4 @@
-"""Copilot key -> local Whisper dictation.
+﻿"""Copilot key -> local Whisper dictation.
 
 First run opens a setup wizard: pick the key, pick the mode, download the model
 with a real progress bar, and try it out. After that it lives in the tray.
@@ -10,6 +10,7 @@ import queue
 import re
 import subprocess
 import sys
+import traceback
 import threading
 import time
 import tkinter as tk
@@ -34,7 +35,7 @@ for _name in ("stdout", "stderr"):
     if getattr(sys, _name) is None:
         setattr(sys, _name, open(os.devnull, "w"))
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 
 APP_NAME = "CopilotVoice"
 if IS_WINDOWS:
@@ -289,17 +290,26 @@ class ChordFilter:
         self.state = "idle"      # idle | waiting | chord | passthrough
         self.held = []
         self.timer = None
-        self.lock = threading.Lock()
+        # RLock, not Lock: injecting a key re-enters handle() on this very
+        # thread, because the hook callback runs on the listener thread that
+        # SendInput feeds. A plain Lock deadlocks there and hangs the keyboard.
+        self.lock = threading.RLock()
 
     def _replay(self):
         """The wait expired, so this was a real Win press after all."""
-        with self.lock:
-            if self.state != "waiting":
-                return
-            self.state = "passthrough"
-            held, self.held = self.held, []
-        for scan in held:
-            self.send(scan)
+        try:
+            with self.lock:
+                if self.state != "waiting":
+                    return
+                self.state = "passthrough"
+                held, self.held = self.held, []
+            for scan in held:   # outside the lock, always
+                self.send(scan)
+        except Exception:
+            log(traceback.format_exc())
+            with self.lock:     # a stuck state would kill the Win key
+                self.state = "idle"
+                self.held = []
 
     def _cancel_timer(self):
         if self.timer:
@@ -307,6 +317,21 @@ class ChordFilter:
             self.timer = None
 
     def handle(self, event):
+        """Returns True to let the event through, False to swallow it.
+
+        Key injection is deferred until the lock is released. Injecting while
+        holding it re-enters this method on the same thread and, with a
+        non-reentrant lock, hangs the keyboard for the life of the process."""
+        try:
+            allowed, to_send = self._decide(event)
+        except Exception:
+            log(traceback.format_exc())
+            return True  # never let a bug in here swallow the user's keyboard
+        for scan in to_send:
+            self.send(scan)
+        return allowed
+
+    def _decide(self, event):
         down = event.event_type == "down"
         scan = event.scan_code
 
@@ -317,40 +342,39 @@ class ChordFilter:
                 self.held = []
                 callback = self.on_down if down else self.on_up
                 threading.Thread(target=callback, daemon=True).start()
-                return False
+                return False, ()
 
             if self.state == "chord":
                 # eat the rest of the chord so the shell never sees a Win press
                 if scan in (self.WIN, self.SHIFT):
                     if not down and scan == self.WIN:
                         self.state = "idle"
-                    return False
+                    return False, ()
                 self.state = "idle"
-                return True
+                return True, ()
 
             if down and scan == self.WIN and self.state == "idle":
                 self.state = "waiting"
                 self.held = [self.WIN]
                 self.timer = threading.Timer(self.window, self._replay)
+                self.timer.daemon = True
                 self.timer.start()
-                return False
+                return False, ()
 
             if self.state == "waiting":
                 if down and scan == self.SHIFT:
                     self.held.append(self.SHIFT)
-                    return False
+                    return False, ()
                 # anything else means this was never the Copilot chord
                 self._cancel_timer()
                 self.state = "passthrough"
                 held, self.held = self.held, []
-                for held_scan in held:
-                    self.send(held_scan)
-                return True
+                return True, tuple(held)
 
             if not down and scan == self.WIN:
                 self.state = "idle"
 
-            return True
+            return True, ()
 
 
 def beep(cfg, high):
@@ -633,7 +657,7 @@ class Wizard:
             self.cfg["hotkey_name"] = e.name or f"scan {e.scan_code}"
             self.post(lambda: (status.config(text=f"Captured: {self.cfg['hotkey_name']}"),
                                detail.config(text=f"scan code {self.cfg['hotkey_scan']}  "
-                                                  "— press another key to change it."),
+                                                  "â€” press another key to change it."),
                                self.next_btn.state(["!disabled"])))
 
         self.capture_hook = keyboard.hook(on_event)
@@ -1075,6 +1099,36 @@ def selftest():
     # ordinary typing is untouched
     passed, sent, _, _ = run_chord([(31, "down"), (31, "up")])
     assert len(passed) == 2 and sent == []
+
+    # Injecting a key re-enters handle() on the hook thread. If that happens
+    # while the lock is held, the keyboard hangs and the Win key dies for the
+    # life of the process -- so drive a sender that really does re-enter.
+    reentrant = []
+    filt = None
+
+    def reentrant_send(scan):
+        reentrant.append(scan)
+        filt.handle(Event(scan, "down"))   # what SendInput does to us
+
+    filt = ChordFilter({110, 134}, lambda: None, lambda: None,
+                       window=0.03, sender=reentrant_send)
+    done = threading.Event()
+
+    def drive():
+        filt.handle(Event(91, "down"))     # withheld
+        filt.handle(Event(18, "down"))     # not the chord -> replay LWin
+        done.set()
+
+    threading.Thread(target=drive, daemon=True).start()
+    assert done.wait(timeout=5), "ChordFilter deadlocked on re-entrant injection"
+    assert reentrant == [91], reentrant
+
+    # and the timer path must not deadlock either
+    filt2 = ChordFilter({110}, lambda: None, lambda: None, window=0.02,
+                        sender=lambda scan: filt2.handle(Event(scan, "down")))
+    filt2.handle(Event(91, "down"))
+    time.sleep(0.15)
+    assert filt2.state != "waiting", "replay timer never completed"
 
     # the tail buffer keeps the mic open past the release, in both modes
     for mode in ("hold", "toggle"):

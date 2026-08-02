@@ -1,11 +1,11 @@
-; Inno Setup script -> dist\CopilotVoiceSetup.exe
+﻿; Inno Setup script -> dist\CopilotVoiceSetup.exe
 #define AppName "Copilot Voice"
 #define AppExe "CopilotVoice.exe"
 #define TaskName "CopilotVoiceAutostart"
 
 [Setup]
 AppName={#AppName}
-AppVersion=0.6.0
+AppVersion=0.6.1
 AppPublisher=aryasuneesh
 DefaultDirName={autopf}\CopilotVoice
 DefaultGroupName={#AppName}

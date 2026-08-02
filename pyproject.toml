@@ -1,10 +1,10 @@
-[build-system]
+﻿[build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "copilot-voice"
-version = "0.6.0"
+version = "0.6.1"
 description = "Turn the Copilot key into local push-to-talk dictation with Whisper"
 readme = "README.md"
 license = "MIT"
