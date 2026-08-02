@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+PackageIdentifier: aryasuneesh.CopilotVoice
+PackageVersion: 0.6.0
+InstallerType: inno
+Scope: machine
+InstallModes:
+  - interactive
+  - silent
+  - silentWithProgress
+UpgradeBehavior: install
+# The keyboard hook cannot suppress a key without elevation.
+ElevationRequirement: elevatesSelf
+ReleaseDate: 2026-08-02
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/aryasuneesh/copilot-voice/releases/download/v0.6.0/CopilotVoiceSetup.exe
+    InstallerSha256: 2D3E7A9B525B94A2AA4101673E5BB0FC7CA6A91E5BD87E02F197131E5ED8541A
+ManifestType: installer
+ManifestVersion: 1.6.0

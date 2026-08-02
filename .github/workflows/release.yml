@@ -1,0 +1,93 @@
+name: Build installers
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Install dependencies
+        run: pip install keyboard sounddevice numpy pyperclip pystray pillow faster-whisper pyinstaller
+      - name: Self-test
+        run: python copilot_voice.py --selftest
+      - name: Build exe
+        run: |
+          python copilot_voice.py --make-ico
+          python -m PyInstaller --noconfirm --clean --windowed --name CopilotVoice --icon icon.ico `
+            --collect-all faster_whisper --collect-all ctranslate2 `
+            --collect-all tokenizers --collect-all onnxruntime `
+            --collect-all huggingface_hub --hidden-import tqdm.auto copilot_voice.py
+      - name: Build installer
+        run: |
+          choco install innosetup -y --no-progress
+          # braces are required: "$env:ProgramFiles(x86)" expands the variable
+          # and then appends a literal "(x86)", losing the space
+          $iscc = Get-ChildItem "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+                                "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" -ErrorAction SilentlyContinue |
+                  Select-Object -First 1
+          if (-not $iscc) { throw "ISCC.exe not found after installing Inno Setup" }
+          & $iscc.FullName installer.iss
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/CopilotVoiceSetup.exe
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk xclip libayatana-appindicator3-1 \
+            libportaudio2 gir1.2-ayatanaappindicator3-0.1 xvfb
+      - name: Install dependencies
+        run: pip install keyboard sounddevice numpy pyperclip pystray pillow faster-whisper pyinstaller
+      - name: Self-test
+        # the keyboard library refuses to import unless euid is 0
+        run: sudo -E env "PATH=$PATH" xvfb-run -a python copilot_voice.py --selftest
+      - name: Build deb
+        run: |
+          chmod +x build-linux.sh
+          ./build-linux.sh "${GITHUB_REF_NAME#v}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-deb
+          path: dist/deb/*.deb
+
+  wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install build
+      - run: python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/*
+
+  release:
+    needs: [windows, linux, wheel]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            windows-installer/CopilotVoiceSetup.exe
+            linux-deb/*.deb
+            python-dist/*.whl
+            python-dist/*.tar.gz

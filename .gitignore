@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+build/
+dist/
+*.egg-info/
+*.nupkg
+*.spec
+icon.ico
+config.json

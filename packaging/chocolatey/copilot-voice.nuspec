@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>copilot-voice</id>
+    <version>0.6.0</version>
+    <packageSourceUrl>https://github.com/aryasuneesh/copilot-voice</packageSourceUrl>
+    <owners>aryasuneesh</owners>
+    <title>Copilot Voice</title>
+    <authors>aryasuneesh</authors>
+    <projectUrl>https://github.com/aryasuneesh/copilot-voice</projectUrl>
+    <licenseUrl>https://github.com/aryasuneesh/copilot-voice/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/aryasuneesh/copilot-voice</projectSourceUrl>
+    <bugTrackerUrl>https://github.com/aryasuneesh/copilot-voice/issues</bugTrackerUrl>
+    <tags>whisper dictation speech-to-text copilot-key hotkey offline accessibility</tags>
+    <summary>Turn the Copilot key into local push-to-talk dictation</summary>
+    <description>
+Hold the Copilot key, speak, let go. Whisper transcribes on-device and the text
+is pasted into the focused app. No account, no API key, nothing leaves the
+machine after the model is downloaded.
+
+Setup runs a wizard: capture any key you like, choose hold-to-talk or
+tap-to-toggle, download a model with a progress bar, and test dictation before
+it touches your other apps.
+
+Requires administrator rights: a low-level keyboard hook cannot suppress a key
+otherwise.
+    </description>
+    <releaseNotes>https://github.com/aryasuneesh/copilot-voice/releases</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

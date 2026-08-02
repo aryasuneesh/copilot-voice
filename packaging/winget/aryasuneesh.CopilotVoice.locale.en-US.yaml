@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+PackageIdentifier: aryasuneesh.CopilotVoice
+PackageVersion: 0.6.0
+PackageLocale: en-US
+Publisher: aryasuneesh
+PublisherUrl: https://github.com/aryasuneesh
+PublisherSupportUrl: https://github.com/aryasuneesh/copilot-voice/issues
+PackageName: Copilot Voice
+PackageUrl: https://github.com/aryasuneesh/copilot-voice
+License: MIT
+LicenseUrl: https://github.com/aryasuneesh/copilot-voice/blob/main/LICENSE
+ShortDescription: Turn the Copilot key into local push-to-talk dictation
+Description: |-
+  Hold the Copilot key, speak, let go. Whisper transcribes on-device and the
+  text is pasted into the focused app. No account, no API key, and nothing
+  leaves the machine after the model is downloaded.
+
+  Setup runs a wizard: capture any key you like, choose hold-to-talk or
+  tap-to-toggle, download a speech model with a progress bar, and test
+  dictation before it touches your other apps.
+Moniker: copilot-voice
+Tags:
+  - whisper
+  - dictation
+  - speech-to-text
+  - accessibility
+  - hotkey
+  - offline
+ReleaseNotesUrl: https://github.com/aryasuneesh/copilot-voice/releases
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

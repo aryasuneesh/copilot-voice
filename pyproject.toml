@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "copilot-voice"
+version = "0.6.0"
+description = "Turn the Copilot key into local push-to-talk dictation with Whisper"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [{name = "aryasuneesh", email = "aryasuneesh3@gmail.com"}]
+keywords = ["whisper", "dictation", "speech-to-text", "copilot-key", "hotkey", "offline"]
+classifiers = [
+    "Environment :: X11 Applications",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: Microsoft :: Windows :: Windows 11",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "keyboard",
+    "sounddevice",
+    "numpy",
+    "pyperclip",
+    "pystray",
+    "pillow",
+    "faster-whisper",
+]
+
+[project.urls]
+Homepage = "https://github.com/aryasuneesh/copilot-voice"
+Issues = "https://github.com/aryasuneesh/copilot-voice/issues"
+
+# gui-scripts, not scripts: on Windows this builds copilot-voice.exe with no
+# console window attached, which is what a tray app wants.
+[project.gui-scripts]
+copilot-voice = "copilot_voice:main"
+
+[tool.setuptools]
+py-modules = ["copilot_voice"]
+
+
